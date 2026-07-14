@@ -2,7 +2,7 @@
 % Please edit documentation in R/salReturn.R
 \name{salReturn_insert}
 \alias{salReturn_insert}
-\title{更新list表和表头表体数据}
+\title{更新插入list表和表头表体数据}
 \usage{
 salReturn_insert(dms_token)
 }
@@ -13,7 +13,7 @@ salReturn_insert(dms_token)
 两个数的和
 }
 \description{
-更新list表和表头表体数据
+更新插入list表和表头表体数据
 }
 \examples{
 salReturn_insert

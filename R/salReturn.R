@@ -9,7 +9,7 @@
 #' salReturn_delete
 salReturn_delete <- function(dms_token) {
 
-  sql = paste0(" truncate table rds_erp_byd_src_t_sal_ReturnStock_list_input ")
+  sql = paste0(" truncate table rds_erp_byd_src_t_sal_returnstock_list_input ")
 
 
   res = tsda::mysql_delete2(token = dms_token,sql_str = sql)
@@ -19,7 +19,7 @@ salReturn_delete <- function(dms_token) {
 }
 
 
-#' 更新list表和表头表体数据
+#' 更新插入list表和表头表体数据
 #'
 #' @param dms_token 第二个参数
 #'
@@ -29,10 +29,113 @@ salReturn_delete <- function(dms_token) {
 #' @examples
 #' salReturn_insert
 salReturn_insert <- function(dms_token) {
-  sql = paste0(" CALL rds_erp_byd_src_proc_sal_ReturnStock_insert();  ")
+  sql1 = paste0(" INSERT OVERWRITE table rds_erp_byd_src_t_sal_returnstock_list_input
+SELECT a.*
+FROM rds_erp_byd_src_t_sal_returnstock_list_input a
+LEFT JOIN rds_erp_byd_src_t_sal_returnstock_list b
+  ON a.FBillNo = b.FBillNo
+WHERE b.FBillNo IS NULL; ")
+  tsda::mysql_update2(token = dms_token,sql_str =sql1 )
 
 
-  res = tsda::mysql_update2(token = dms_token,sql_str =sql )
+  sql2 = paste0("insert into rds_erp_byd_src_t_sal_returnstock_list
+select ROW_NUMBER() OVER (ORDER BY FBillNo ,Fseq,FMaterialNumber)
++ IFNULL((SELECT MAX(fid) FROM rds_erp_byd_src_t_sal_returnstock_list), 0)as	FID	,
+Fdate,
+FBillNo	,
+FSaleOrgNumber	,
+FSaleOrgName	,
+FStatus 	,
+FCompStatus	,
+FSaleOrderNo	,
+FRequestDate	,
+FCustomerNumber	,
+FCustomerName	,
+FSellerNumber	,
+FSellerName	,
+FReturnReasonNumber	,
+FReturnReasonName	,
+FEmpNumber	,
+FEmpName	,
+Fseq	,
+FMaterialNumber	,
+FMaterialName	,
+FReturnQty	,
+FReturnNetValue
+from rds_erp_byd_src_t_sal_returnstock_list_input;")
+  tsda::mysql_update2(token = dms_token,sql_str =sql2)
+
+  sql3 = paste0("
+insert into rds_erp_byd_src_t_sal_returnstock
+select
+ROW_NUMBER() OVER (ORDER BY FBillNo )+(select max(fid) from rds_erp_byd_src_t_sal_returnstock) as	FID	,
+ Fdate,
+FBillNo	,
+FSaleOrgNumber	,
+FSaleOrgName	,
+FStatus 	,
+FCompStatus	,
+FRequestDate	,
+FCustomerNumber	,
+FCustomerName	,
+FSellerNumber	,
+FSellerName	,
+FReturnReasonNumber	,
+FReturnReasonName	,
+FEmpNumber	,
+FEmpName	,
+'1900-01-01' as FPostDate	,
+0	as	FIsDo	,
+''	as	FLogMessage	,
+NOW()	as	FUpdateTime	,
+0	as	FNeedUpdat
+from rds_erp_byd_src_t_sal_returnstock_list_input
+group by
+Fdate	,
+FBillNo	,
+FSaleOrgNumber	,
+FSaleOrgName	,
+FStatus 	,
+FCompStatus	,
+FRequestDate	,
+FCustomerNumber	,
+FCustomerName	,
+FSellerNumber	,
+FSellerName	,
+FReturnReasonNumber	,
+FReturnReasonName	,
+FEmpNumber	,
+FEmpName	;")
+  tsda::mysql_update2(token = dms_token,sql_str =sql3)
+
+  sql4=paste0("insert into rds_erp_byd_src_t_sal_returnstockentry
+select ROW_NUMBER() OVER (ORDER BY FBillNo ,Fseq,FMaterialNumber)
++ IFNULL((SELECT MAX(Fentryid) FROM rds_erp_byd_src_t_sal_returnstockentry), 0)	as	fentryid	,
+fbillno	as	fbillno	,
+Fseq	as	Fseq	,
+FMaterialNumber	as	FMaterialNumber	,
+FMaterialName	as	FMaterialName	,
+REPLACE(REPLACE(SUBSTRING_INDEX(FReturnQty, ' ', 1),'#',0), ',', '')	as	FReturnQty	,
+REPLACE(REPLACE(SUBSTRING_INDEX(FReturnNetValue, ' ', 1),'#',1), ',', '')	as	FReturnNetValue	,
+SUBSTRING_INDEX(FReturnQty, ' ', -1)	as	FUnit	,
+SUBSTRING_INDEX(FReturnNetValue, ' ', -1)	as	FCURRENCY	,
+0	as	FPrice	,
+0	as	FTaxAmt	,
+0	as	FTaxRate	,
+''	as	FSrcBillName	,
+''	as	FSrcBillNo	,
+0	as	FSrcSeq	,
+0	as	FIsDo	,
+''	as	FLogMessage	,
+now()	as	FUpdateTime	,
+0	as	FNeedUpdate
+from rds_erp_byd_src_t_sal_returnstock_list_input;")
+  tsda::mysql_update2(token = dms_token,sql_str =sql4)
+
+  sql5=paste0("TRUNCATE TABLE rds_erp_byd_src_t_sal_returnstock_list_input;")
+  res = tsda::mysql_delete2(token = dms_token,sql_str =sql5)
+
+
   return(res)
 
 }
@@ -74,7 +177,7 @@ FMaterialNumber	物料编码	,
 FMaterialName	物料名称	,
 FReturnQty	退货数量	,
 FReturnNetValue	退货净值
-from rds_erp_byd_src_t_sal_ReturnStock_list
+from rds_erp_byd_src_t_sal_returnstock_list
     WHERE FRequestDate >= '",FStartDate,"' AND FRequestDate <= '",FEndDate,"';
 
 
